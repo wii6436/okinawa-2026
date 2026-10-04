@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>沖繩大冒險 RPG ｜ 勇者遠征與集章圖鑑</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: 復古像素與現代字體 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    .font-pixel { font-family: 'DotGothic16', monospace; }
+    .font-body { font-family: 'Noto Sans TC', sans-serif; }
+    .nes-box {
+      border: 4px solid #1e293b;
+      box-shadow: 4px 4px 0px #0f172a;
+    }
+    .nes-btn {
+      border: 3px solid #1e293b;
+      box-shadow: 3px 3px 0px #0f172a;
+      transition: all 0.1s ease;
+    }
+    .nes-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px #0f172a;
+    }
+    /* 蓋章動畫 */
+    @keyframes stamp-pop {
+      0% { transform: scale(3) rotate(-25deg); opacity: 0; }
+      100% { transform: scale(1) rotate(-12deg); opacity: 0.9; }
+    }
+    .stamp-badge {
+      animation: stamp-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-amber-50 text-slate-800 font-body min-h-screen pb-24 selection:bg-amber-300">
+
+  <!-- 頂部 RPG 狀態 HUD -->
+  <header class="bg-slate-900 text-white p-3 sticky top-0 z-40 border-b-4 border-slate-950 shadow-md">
+    <div class="max-w-2xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl animate-bounce">⚔️</span>
+        <div>
+          <div class="font-pixel text-[10px] text-amber-400 tracking-wider">OKINAWA QUEST 2026</div>
+          <h1 class="text-sm font-bold text-white leading-none">沖繩家族遠征圖鑑</h1>
+        </div>
+      </div>
+      <!-- 集章進度與狀態 -->
+      <div class="text-right text-[11px] font-pixel space-y-0.5">
+        <div class="text-emerald-400">成員：14大 6幼 (3車)</div>
+        <div class="text-amber-300 flex items-center justify-end gap-1">
+          <i class="fa-solid fa-stamp text-xs"></i> 探險徽章: <span id="stamp-count" class="font-bold text-sm text-amber-400">0</span>/12
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 關卡導航 Tabs (包含序章) -->
+  <nav class="bg-amber-100 border-b-4 border-slate-800 sticky top-[57px] z-30 shadow-sm">
+    <div class="max-w-2xl mx-auto flex gap-2 p-2 overflow-x-auto no-scrollbar">
+      <button onclick="loadChapter(0)" id="tab-0" class="nes-btn px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-amber-400 text-slate-900 font-pixel">📜 序章：裝備整檢</button>
+      <button onclick="loadChapter(1)" id="tab-1" class="nes-btn px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-slate-700 font-pixel">D1 降落補給</button>
+      <button onclick="loadChapter(2)" id="tab-2" class="nes-btn px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-slate-700 font-pixel">D2 巨獸與長堤</button>
+      <button onclick="loadChapter(3)" id="tab-3" class="nes-btn px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-slate-700 font-pixel">D3 恐龍與玻璃船</button>
+      <button onclick="loadChapter(4)" id="tab-4" class="nes-btn px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-slate-700 font-pixel">D4 未來深海紺</button>
+      <button onclick="loadChapter(5)" id="tab-5" class="nes-btn px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-slate-700 font-pixel">D5 凱旋返國</button>
+    </div>
+  </nav>
+
+  <!-- 主頁面容器 -->
+  <main class="max-w-2xl mx-auto p-4 space-y-4">
+
+    <!-- 關卡大綱看版 -->
+    <div class="nes-box bg-white rounded-2xl p-4 relative overflow-hidden">
+      <div class="flex items-center justify-between border-b-2 border-slate-200 pb-2 mb-2">
+        <span id="chapter-badge" class="font-pixel text-xs bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">PROLOGUE</span>
+        <span id="chapter-location" class="text-xs text-slate-500 font-semibold"><i class="fa-solid fa-compass"></i> 行前準備基地</span>
+      </div>
+      <h2 id="chapter-title" class="text-lg font-black text-slate-900">序章：勇者出征必備道具檢視</h2>
+      <p id="chapter-desc" class="text-xs text-slate-600 mt-1 leading-relaxed">
+        出發前往琉球國度之前，請各位隊長與副駕務必清點背包道具。全部打勾後即可順利踏上征途！
+      </p>
+    </div>
+
+    <!-- 序章專用：裝備檢查清單 (僅序章顯示) -->
+    <div id="prologue-section" class="space-y-3">
+      <div class="nes-box bg-white rounded-2xl p-4 border-3 border-slate-900">
+        <h3 class="font-pixel text-sm font-bold text-slate-800 flex items-center gap-2 mb-3">
+          <i class="fa-solid fa-shield-halved text-sky-600"></i> 【一級重要通行卷軸與金幣】
+        </h3>
+        <div class="space-y-2.5 text-xs text-slate-700" id="checklist-essential">
+          <!-- JS 動態生成 -->
+        </div>
+      </div>
+
+      <div class="nes-box bg-white rounded-2xl p-4 border-3 border-slate-900">
+        <h3 class="font-pixel text-sm font-bold text-slate-800 flex items-center gap-2 mb-3">
+          <i class="fa-solid fa-baby-carriage text-pink-600"></i> 【幼靈護衛裝備（1-4歲專用）】
+        </h3>
+        <div class="space-y-2.5 text-xs text-slate-700" id="checklist-baby">
+          <!-- JS 動態生成 -->
+        </div>
+      </div>
+
+      <div class="nes-box bg-white rounded-2xl p-4 border-3 border-slate-900">
+        <h3 class="font-pixel text-sm font-bold text-slate-800 flex items-center gap-2 mb-3">
+          <i class="fa-solid fa-car text-emerald-600"></i> 【陸行鐵騎必備道具（司機專用）】
+        </h3>
+        <div class="space-y-2.5 text-xs text-slate-700" id="checklist-driver">
+          <!-- JS 動態生成 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 任務關卡串列容器 -->
+    <div id="quest-container" class="space-y-4">
+      <!-- 由 JS 動態生成任務卡片與集章功能 -->
+    </div>
+
+  </main>
+
+  <!-- 底部固定大本營快捷鍵 -->
+  <div class="fixed bottom-3 left-4 right-4 max-w-2xl mx-auto z-30">
+    <div class="nes-box bg-slate-900/95 backdrop-blur text-white px-4 py-2 rounded-2xl flex items-center justify-between text-xs">
+      <div class="flex items-center gap-2">
+        <span class="text-base">🏰</span>
+        <span class="font-bold text-amber-300">大本營：宇流麻包棟之城</span>
+      </div>
+      <button onclick="copyMapcode('499 548 701*55', '宇流麻民宿')" class="nes-btn bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-pixel font-bold px-3 py-1 rounded-lg">
+        基地 Mapcode
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast 提示訊息 -->
+  <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-amber-300 border-2 border-amber-400 px-4 py-2 rounded-xl text-xs font-pixel shadow-2xl z-50 transition-all opacity-0 pointer-events-none">
+    成就已解鎖！
+  </div>
+
+  <script>
+    // 裝備檢查清單資料
+    const inventory = {
+      essential: [
+        { id: "inv_passport", text: "全體護照正本（效期 6 個月以上，大人小孩共 20 本）" },
+        { id: "inv_yen", text: "日幣現金（分拆給各車司機，過路費/自動販賣機/停車場備用）" },
+        { id: "inv_credit", text: "海外高回饋信用卡 2-3 張（Apple Pay 綁定完成）" },
+        { id: "inv_vjw", text: "Visit Japan Web（VJW）通關 QR Code 截圖存手機" },
+        { id: "inv_esim", text: "日本網卡 / eSIM 安裝確認（確保每台車副駕網路暢通）" }
+      ],
+      baby: [
+        { id: "inv_stroller", text: "輕便可折疊嬰兒推車（帶 6 台，必備遮陽簾與雨罩）" },
+        { id: "inv_diapers", text: "首日隨身尿布包、濕紙巾、拋棄式圍兜、防漏水壺" },
+        { id: "inv_med", text: "常備兒童藥品（退燒藥水、防蚊液、止癢膏、體溫計）" },
+        { id: "inv_clothes", text: "薄長袖防曬外套 1 件（水族館室內冷氣偏冷備用）" }
+      ],
+      driver: [
+        { id: "inv_driver_tw", text: "台灣駕照【正本】（3 位主要司機必帶！）" },
+        { id: "inv_driver_trans", text: "台灣駕照【日文譯本】（監理所辦理，效期內正本）" },
+        { id: "inv_charger", text: "車用手機支架 3 組、點菸孔雙孔快充頭 3 顆、充電線" }
+      ]
+    };
+
+    // 關卡冒險資料庫 (D1 - D5)
+    const adventures = {
+      1: {
+        badge: "CHAPTER 01",
+        title: "降落琉球之境與前哨大補給",
+        location: "那霸空港 ➔ 永旺夢樂城來客夢 ➔ 宇流麻大本營",
+        desc: "出關後先鋒司機領鐵騎接應全員！前往全島最大商場吹冷氣看大水槽，補齊小怪獸物資與晚餐。",
+        quests: [
+          {
+            id: "q1_1",
+            time: "14:40 - 17:00",
+            tag: "任務一：組隊成行",
+            title: "那霸空港降落 ＆ Taxi 領車接駁",
+            desc: "14:40 抵達領行李 (80min) ➔ 16:00 司機搭計程車去車行領車 (60min)，開回機場接應全員與幼童。",
+            img: "https://images.unsplash.com/photo-1542296332-2e4473faf563?auto=format&fit=crop&w=800&q=80",
+            imgCaption: "沖繩天空的起點，自駕車隊集結出發",
+            mapcode: "33 156 041*41",
+            mapQuery: "Naha+Airport"
+          },
+          {
+            id: "q1_2",
+            time: "18:00 - 21:00 (3hr)",
+            tag: "任務二：主城補給",
+            title: "永旺夢樂城來客夢 (AEON MALL Rycom)",
+            desc: "【預告】一樓挑高大水槽看熱帶魚！西松屋/玩具反斗城補足尿布與鮮奶，美食街自由開飯。",
+            img: "https://scontent.ftpe1-3.fna.fbcdn.net/v/t39.30808-6/481765123_1032161052280309_4272874653264472536_n.jpg?stp=dst-jpg_tt6&cstp=mx550x373&ctp=s550x373&_nc_cat=100&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=IK3oaCJJ2ckQ7kNvwE2AzD8&_nc_oc=AdoKRhZNfExdsfjpd20Wigf1PoJ9Vf8rpV3spd7W8b5rvq6j4ADMwVlFQBYmCh05iD8NGDnxyP0h896L3ca_ar0F&_nc_zt=23&_nc_ht=scontent.ftpe1-3.fna&_nc_gid=YcDyLHMDiS77LU7gk7ABCw&_nc_ss=7b289&oh=00_AQPdwwXWN9dAf2IeI3ae2_QeAXUvT5DtgDPlLYUxtFaNaw&oe=6AC85CE6",
+            imgCaption: "大型熱帶海水族箱，色彩繽紛魚群環繞",
+            mapcode: "33 530 406*45",
+            mapQuery: "AEON+MALL+Okinawa+Rycom"
+          },
+          {
+            id: "q1_3",
+            time: "21:30",
+            tag: "紮營：進駐大本營",
+            title: "宇流麻海景包棟民宿 Check-in",
+            desc: "開車 30 分鐘抵達連泊 4 晚的包棟別墅！小童洗澡入睡，大人在客廳開喝 Orion 啤酒慶祝！",
+            img: "https://a0.muscache.com/im/pictures/miso/Hosting-931439646242807601/original/98eb0f6b-052a-4a71-a8cd-23b79eabd668.jpeg?im_w=1200",
+            imgCaption: "連泊4晚的溫馨家族客廳基地",
+            mapcode: "499 548 701*55",
+            mapQuery: "Uruma+Okinawa"
+          }
+        ]
+      },
+      2: {
+        badge: "CHAPTER 02",
+        title: "巨獸之海 ＆ 傍晚海中長堤神安排",
+        location: "美麗海水族館 (停P9) ➔ 許田休息站 ➔ 傍晚海中道路 ➔ 民宿晚餐",
+        desc: "【全日不移車放電】直奔國營美麗海！看巨大鯨鯊與海豚跳躍，下午沙灘踩浪，回程順遊海中道路看夕陽！",
+        quests: [
+          {
+            id: "q2_1",
+            time: "09:30 - 12:00 (2.5hr)",
+            tag: "主線任務：深海鯨鯊",
+            title: "沖繩美麗海水族館 (直達 P9 停車場)",
+            desc: "07:30 起床盥洗吃早餐，08:30 出發直奔名護 (90min)。仰望黑潮之海大鯨鯊、觸摸池摸海星、11:00 戶外海豚劇場！",
+            img: "https://churaumi.okinawa/userfiles/images/Y0A7702-1-1.jpg",
+            imgCaption: "黑潮之海：近距離仰望巨大鯨鯊悠游",
+            mapcode: "553 075 797*77",
+            mapQuery: "Okinawa+Churaumi+Aquarium"
+          },
+          {
+            id: "q2_2",
+            time: "12:00 - 14:00 (2hr)",
+            tag: "補給點：海景午餐",
+            title: "館內海景自助餐 Inoh / 美食區",
+            desc: "車子完全不動！推推車直上 4 樓吃海景自助吧，悠哉吹冷氣欣賞蔚藍外海。",
+            img: "https://churaumi.okinawa/userfiles/images/area/restaurant/02/260805oceanblue1.jpg",
+            imgCaption: "面海的大面落地窗海景用餐空間",
+            mapcode: "553 075 797*77",
+            mapQuery: "Restaurant+INOH"
+          },
+          {
+            id: "q2_3",
+            time: "15:00 - 16:30 (90min)",
+            tag: "放電任務：自然踩浪",
+            title: "翡翠海灘踩水 or 藍海兒童樂園",
+            desc: "【預告】純白安全沙灘讓幼童踏浪踩沙，或在樹蔭下的安全滑梯設施放電。",
+            img: "https://oki-park.jp/userfiles/images/enjoy_guide/play/img_03.jpg",
+            imgCaption: "純白沙灘與漸層如果凍般的清澈海水",
+            mapcode: "553 105 325*11",
+            mapQuery: "Emerald+Beach+Okinawa"
+          },
+          {
+            id: "q2_4",
+            time: "17:30 - 18:30 (1hr)",
+            tag: "點心關卡：黃金炸球",
+            title: "許田休息站 (道の駅 許田)",
+            desc: "開車 60 分鐘抵達許田，買現炸三矢沙翁（黑糖開口笑球）與鮮奶在車上吃。",
+            img: "https://img.letsgojp.com/2026/08/michinoeki-1920x1277-1787642253.webp",
+            imgCaption: "剛起鍋熱騰騰的現炸黑糖球點心",
+            mapcode: "206 476 706*66",
+            mapQuery: "Roadside+Station+Kyoda"
+          },
+          {
+            id: "q2_5",
+            time: "18:45 - 19:30",
+            tag: "絕景順遊：海中疾行",
+            title: "海中道路・Ayahashi 館 (東海岸)",
+            desc: "【順路極品！】從許田回宇流麻，順著大路開進海中長堤！吹涼爽晚風看夕陽，再開 7 分鐘回民宿晚餐開趴！",
+            img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKdapZQIFnta3tgBdbxiw-IpJ5F88GWOAJjC8t3TBl9kL2pXpPhB0hOvc&s=10",
+            imgCaption: "開在海中央的長堤，兩側碧藍海浪齊平",
+            mapcode: "499 576 410*55",
+            mapQuery: "Umi-no-Eki+Ayahashikan"
+          }
+        ]
+      },
+      3: {
+        badge: "CHAPTER 03",
+        title: "恐龍之森 ＆ 玻璃船順接花笠和室",
+        location: "名護鳳梨園 ➔ 百年大家 ➔ 部瀨名玻璃船 ➔ 殘波岬 ➔ 花笠食堂",
+        desc: "【動線極順不折返】搭恐龍自動車，古民家大啖阿古豬，下午順路搭鯨魚玻璃船，西海岸看燈塔夕陽吃大榻榻米！",
+        quests: [
+          {
+            id: "q3_1",
+            time: "10:00 - 11:30",
+            tag: "主線任務：恐龍探險",
+            title: "名護鳳梨園 (ナゴパイナップルパーク)",
+            desc: "搭乘自動駕駛鳳梨車深入侏儸紀恐龍森林，看會動會叫的仿真暴龍，無階梯好推推車！",
+            img: "https://fullfenblog.tw/wp-content/uploads/batch_DSC_2010-5.jpg",
+            imgCaption: "幼童最愛的無人自動駕駛鳳梨造型車",
+            mapcode: "206 716 467*85",
+            mapQuery: "Nago+Pineapple+Park"
+          },
+          {
+            id: "q3_2",
+            time: "11:45 - 13:15",
+            tag: "美食關卡：古民家宴",
+            title: "百年古家 大家 (うふやー)",
+            desc: "潺潺流水瀑布古民家，品嚐頂級阿古豬排骨麵與定食，老少咸宜無牛肉疑慮。",
+            img: "https://media-cdn.tripadvisor.com/media/photo-s/0d/3e/39/c3/caption.jpg ",
+            imgCaption: "森林綠意流水環繞的百年琉球古民宅",
+            mapcode: "206 745 056*66",
+            mapQuery: "Ufuya"
+          },
+          {
+            id: "q3_3",
+            time: "13:45 - 15:15",
+            tag: "海中奇觀：透明船底",
+            title: "部瀨名海中公園 (鯨魚玻璃船)",
+            desc: "【順路首選！】往南開 20 分鐘即達！搭乘可愛白色大鯨魚遊覽船，透過船底玻璃看野生熱帶魚和珊瑚！",
+            img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyAYAIKqkzUExWwAvJcwyK4N9vc4ruelnLdKqdSSLrxwnStvkO9PuuGJM&s=10",
+            imgCaption: "可愛的白色大鯨魚造型海中玻璃底觀光船",
+            mapcode: "206 442 075*20",
+            mapQuery: "Busena+Marine+Park"
+          },
+          {
+            id: "q3_4",
+            time: "16:45 - 17:45",
+            tag: "西岸風光：白塔落日",
+            title: "殘波岬公園 ＆ 白色燈塔 (讀谷村)",
+            desc: "車程中小童深層補眠！抵達壯麗純白殘波岬燈塔，海風步道推車散步看西海岸夕陽。",
+            img: "https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=800&q=80",
+            imgCaption: "西海岸佇立在斷崖上的巨大純白燈塔",
+            mapcode: "1005 685 326*47",
+            mapQuery: "Cape+Zampa+Lighthouse"
+          },
+          {
+            id: "q3_5",
+            time: "18:00 - 19:30",
+            tag: "大和室定食：御菓子御殿",
+            title: "花笠食堂 殘波店 (讀谷本店)",
+            desc: "大榻榻米座敷席，1 歲寶寶平躺放鬆！炸豬排、排骨麵定食好搞定，吃飽順逛御菓子御殿買現烤紅芋塔！",
+            img: "https://brianviews.com/wp-content/uploads/flickr/34944429910_44456546bd_o.jpg",
+            imgCaption: "日式榻榻米包廂定食，隔壁即是伴手禮殿堂",
+            mapcode: "1005 656 464*41",
+            mapQuery: "Hanagasa+Shokudo+Zanpa"
+          }
+        ]
+      },
+      4: {
+        badge: "CHAPTER 04",
+        title: "未來科技水族 ＆ 頂級蒸肉夜宴",
+        location: "宇流麻 ➔ DMM 水族館 ➔ 瀨長島看飛機 ➔ Shabu-shabu 紺",
+        desc: "【南部互動日】踩在玻璃地板上看魚，近距離餵食樹懶與企鵝！晚間在獨立包廂享用頂級阿古豬蒸肉火鍋！",
+        quests: [
+          {
+            id: "q4_1",
+            time: "10:15 - 12:15",
+            tag: "主線任務：觸摸深海",
+            title: "DMM Kariyushi 水族館",
+            desc: "【預告】踩在全透明地板俯瞰大魚！觸摸池親手摸海星與小鯊魚，看大嘴鳥、企鵝與樹懶！",
+            img: "https://kariyushi-aquarium.com/uploads/index_img_detail_kawauso.png",
+            imgCaption: "光影穿透的玻璃地面與近距離動物互動",
+            mapcode: "232 543 400*20",
+            mapQuery: "DMM+Kariyushi+Aquarium"
+          },
+          {
+            id: "q4_2",
+            time: "12:15 - 14:00 (105 min)",
+            tag: "補給任務：無縫開飯",
+            title: "iias 沖繩豐崎 (直通商場美食街)",
+            desc: "【完全不需移車】DMM 水族館出口直通商場！1 樓與 2 樓有超寬敞的美食廣場與海景餐廳（A&W 漢堡、拉麵、定食任選），具備完備的哺乳室與尿布台，幼童補給最輕鬆。",
+            img: "https://static.gltjp.com/glt/data/directory/18000/17446/20250831_190410_eddf9f51_w1920.webp",
+            imgCaption: "DMM水族館直通的 iias 沖繩豐崎大型購物中心",
+            mapcode: "232 543 400*20",
+            mapQuery: "iias+Okinawa+Toyosaki"
+          },
+          {
+            id: "q4_3",
+            time: "14:00 - 15:30",
+            tag: "海景任務：巨鳥掠空",
+            title: "瀨長島 Umikaji Terrace",
+            desc: "純白地中海階梯商場，每 3-5 分鐘一架飛機自頭頂超低空降落！外帶幸福鬆餅吃下午茶吹海風。",
+            img: "https://svcstrg.cld.navitime.jp/travelguide/p47010008/p47010008_01.jpg",
+            imgCaption: "希臘純白建築與超近降落的民航客機",
+            mapcode: "33 002 602*06",
+            mapQuery: "Umikaji+Terrace+Senagajima"
+          },
+          {
+            id: "q4_4",
+            time: "17:30 - 19:30",
+            tag: "傳奇夜宴：和風包廂",
+            title: "Shabu-shabu 紺 東町本店",
+            desc: "獨立榻榻米大包廂！木蒸籠蒸熟阿古豬與和牛，忌牛分鍋各吃各的，小童自由在和室活動。",
+            img: "https://image.kkday.com/v2/image/get/s1.kkday.com/product_253534/20241017030417_sD0t8/png",
+            imgCaption: "熱氣蒸騰的香嫩黑豬肉蒸籠與高湯鍋物",
+            mapcode: "33 156 041*41",
+            mapQuery: "Shabu-shabu+KOU+Higashimachi"
+          }
+        ]
+      },
+      5: {
+        badge: "CHAPTER 05",
+        title: "凱旋回航與免稅寶藏",
+        location: "宇流麻退房 ➔ 那霸小祿拉麵 ➔ 還車 ➔ 那霸空港",
+        desc: "收拾冒險戰利品與滿滿回憶，歸還坐騎鐵騎，於機場選購熱騰騰紅芋塔，順利返台！",
+        quests: [
+          {
+            id: "q5_1",
+            time: "11:00 - 12:15",
+            tag: "最後元氣：琉球拉麵",
+            title: "通堂拉麵 (小祿本店)",
+            desc: "濃厚豚骨男麵與清甜雞湯女麵，搭配無限量冰涼辣豆芽與煎餃，配有完整幼童專用餐具座椅。",
+            img: "https://pingu.blog/wp-content/uploads/2025/02/20250225212127_0_efe2b2.jpg",
+            imgCaption: "暖心暖胃的沖繩經典拉麵與黃金煎餃",
+            mapcode: "33 094 289*51",
+            mapQuery: "Ryukyu+Shinmen+Tondo+Oroku"
+          },
+          {
+            id: "q5_2",
+            time: "13:00 - 15:25",
+            tag: "任務完成：榮耀返航",
+            title: "那霸國際航廈 ➔ 台灣溫暖的家 ✈️",
+            desc: "3 台自駕車加滿油歸還。機場報到託運、外帶現烤熱蘋果派，15:25 班機準時起飛！",
+            img: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=800&q=80",
+            imgCaption: "滿載美好家族回憶平安起飛",
+            mapcode: "33 156 041*41",
+            mapQuery: "Naha+Airport"
+          }
+        ]
+      }
+    };
+
+    let currentChapter = 0;
+
+    // 載入章節
+    function loadChapter(ch) {
+      currentChapter = ch;
+      for(let i=0; i<=5; i++){
+        const btn = document.getElementById('tab-' + i);
+        if(i === ch){
+          btn.classList.remove('bg-white', 'text-slate-700');
+          btn.classList.add('bg-amber-400', 'text-slate-900');
+        } else {
+          btn.classList.remove('bg-amber-400', 'text-slate-900');
+          btn.classList.add('bg-white', 'text-slate-700');
+        }
+      }
+
+      const prolSec = document.getElementById('prologue-section');
+      const container = document.getElementById('quest-container');
+
+      if(ch === 0) {
+        document.getElementById('chapter-badge').innerText = "PROLOGUE";
+        document.getElementById('chapter-title').innerText = "序章：勇者出征行囊裝備檢視";
+        document.getElementById('chapter-location').innerHTML = '<i class="fa-solid fa-compass"></i> 出發前在台檢核';
+        document.getElementById('chapter-desc').innerText = "出發前往琉球國度之前，請各位隊長與副駕務必清點背包道具。全部打勾後即可順利出征！";
+        prolSec.classList.remove('hidden');
+        container.innerHTML = '';
+        renderInventory();
+      } else {
+        prolSec.classList.add('hidden');
+        const data = adventures[ch];
+        document.getElementById('chapter-badge').innerText = data.badge;
+        document.getElementById('chapter-title').innerText = data.title;
+        document.getElementById('chapter-location').innerHTML = '<i class="fa-solid fa-location-dot"></i> ' + data.location;
+        document.getElementById('chapter-desc').innerText = data.desc;
+        renderQuests(data.quests);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 渲染序章裝備清單 (具有 LocalStorage 記憶勾選)
+    function renderInventory() {
+      const renderGroup = (items, elementId) => {
+        const el = document.getElementById(elementId);
+        el.innerHTML = '';
+        items.forEach(item => {
+          const checked = localStorage.getItem(item.id) === 'true';
+          const row = document.createElement('label');
+          row.className = "flex items-start gap-2.5 cursor-pointer select-none py-1 border-b border-slate-100 last:border-none";
+          row.innerHTML = `
+            <input type="checkbox" onchange="toggleInv('${item.id}', this)" ${checked ? 'checked' : ''} class="w-4 h-4 mt-0.5 rounded text-amber-500 focus:ring-amber-400 cursor-pointer">
+            <span class="${checked ? 'line-through text-slate-400 font-normal' : 'font-bold text-slate-700'}">${item.text}</span>
+          `;
+          el.appendChild(row);
+        });
+      };
+      renderGroup(inventory.essential, 'checklist-essential');
+      renderGroup(inventory.baby, 'checklist-baby');
+      renderGroup(inventory.driver, 'checklist-driver');
+    }
+
+    function toggleInv(id, el) {
+      localStorage.setItem(id, el.checked);
+      renderInventory();
+      if(el.checked) showToast("道具已放入冒險行囊！🎒");
+    }
+
+    // 渲染各章任務卡片與集章功能
+    function renderQuests(quests) {
+      const container = document.getElementById('quest-container');
+      container.innerHTML = '';
+
+      quests.forEach((q, idx) => {
+        const isStamped = localStorage.getItem("stamp_" + q.id) === 'true';
+        const card = document.createElement('div');
+        card.className = "nes-box bg-white rounded-2xl overflow-hidden border-3 border-slate-900 relative";
+        card.innerHTML = `
+          <!-- 照片與實景展示 -->
+          <div class="relative h-48 bg-slate-900 overflow-hidden">
+            <img src="${q.img}" alt="${q.title}" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/30 to-transparent"></div>
+            
+            <div class="absolute top-3 left-3 bg-amber-400 text-slate-900 font-pixel text-xs px-2 py-0.5 rounded shadow">
+              STAGE 0${idx+1}
+            </div>
+
+            <!-- 印章蓋章徽章 (若已蓋章則顯示) -->
+            <div id="stamp-badge-${q.id}" class="${isStamped ? '' : 'hidden'} stamp-badge absolute top-3 right-3 bg-amber-400/90 text-red-700 border-2 border-red-600 rounded-full w-14 h-14 flex flex-col items-center justify-center font-pixel shadow-xl -rotate-12 pointer-events-none">
+              <span class="text-[9px] font-black tracking-widest leading-none">CLEARED</span>
+              <span class="text-xs font-black">已踏破</span>
+            </div>
+
+            <div class="absolute bottom-2 left-3 right-3 text-white">
+              <span class="text-[10px] bg-sky-600 px-2 py-0.5 rounded font-bold">${q.tag}</span>
+              <div class="text-xs text-amber-300 font-pixel mt-0.5">${q.time}</div>
+              <h3 class="text-base font-bold text-white drop-shadow">${q.title}</h3>
+            </div>
+          </div>
+
+          <!-- 說明與功能按鈕 -->
+          <div class="p-3.5 space-y-2.5">
+            <p class="text-xs text-slate-600 leading-relaxed">${q.desc}</p>
+            <div class="bg-amber-50 border border-amber-200 text-amber-900 px-2.5 py-1.5 rounded-lg text-[11px] flex items-center gap-1.5 font-medium">
+              <i class="fa-solid fa-camera text-amber-600"></i>
+              <span><b>視覺亮點：</b>${q.imgCaption}</span>
+            </div>
+
+            <!-- 導航、複製與蓋章按鈕 -->
+            <div class="pt-1 flex gap-2">
+              <button onclick="toggleStamp('${q.id}')" class="nes-btn flex-1 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-bold py-2 px-2 rounded-xl transition flex items-center justify-center gap-1 font-pixel">
+                <i class="fa-solid fa-stamp"></i> 打卡集章
+              </button>
+              <button onclick="copyMapcode('${q.mapcode}', '${q.title}')" class="nes-btn flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold py-2 px-2 rounded-xl transition flex items-center justify-center gap-1">
+                <i class="fa-regular fa-copy"></i> Mapcode
+              </button>
+              <a href="https://maps.google.com/?q=${q.mapQuery}" target="_blank" class="nes-btn flex-1 bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold py-2 px-2 rounded-xl transition flex items-center justify-center gap-1 text-center">
+                <i class="fa-solid fa-location-arrow"></i> 導航
+              </a>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      updateStampTotal();
+    }
+
+    // 集章切換
+    function toggleStamp(qid) {
+      const current = localStorage.getItem("stamp_" + qid) === 'true';
+      const badge = document.getElementById("stamp-badge-" + qid);
+      if(!current) {
+        localStorage.setItem("stamp_" + qid, "true");
+        badge.classList.remove('hidden');
+        showToast("🎖️ 任務達成！成功蓋上冒險神印！");
+      } else {
+        localStorage.removeItem("stamp_" + qid);
+        badge.classList.add('hidden');
+        showToast("已重置該景點章戳。");
+      }
+      updateStampTotal();
+    }
+
+    // 計算總印章數
+    function updateStampTotal() {
+      let count = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        if (localStorage.key(i).startsWith("stamp_")) count++;
+      }
+      document.getElementById('stamp-count').innerText = count;
+    }
+
+    // 複製 Mapcode
+    function copyMapcode(code, name) {
+      navigator.clipboard.writeText(code).then(() => {
+        showToast(`已複製 [${name}] Mapcode: ${code}`);
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.remove('opacity-0');
+      setTimeout(() => toast.classList.add('opacity-0'), 2500);
+    }
+
+    // 預設載入序章
+    loadChapter(0);
+    updateStampTotal();
+  </script>
+</body>
+</html>
